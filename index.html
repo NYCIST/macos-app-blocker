@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>macOS App Blocker Script Generator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚫 macOS App Blocker Script Generator</h1>
+            <p>Generate custom macOS scripts to block applications during specific times</p>
+        </div>
+
+        <div class="form-section">
+            <div class="info-box">
+                <p><strong>What this does:</strong> This generates a bash script that will automatically block the Messages app on macOS during specified times on school/work days. The script uses cron jobs and LaunchDaemons to enforce the blocking. <a href="#instructions" style="color: #2196F3; text-decoration: none; font-weight: 600;">View instructions →</a></p>
+                <p style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #ddd;"><strong>Need to create your school days list?</strong> <a href="calendar.html" style="color: #667eea; text-decoration: none; font-weight: 600;">School Day Generator →</a></p>
+            </div>
+
+            <form id="scriptForm">
+                <div class="form-group">
+                    <label for="appName">App to Block</label>
+                    <select id="appName" required>
+                        <option value="Messages">Messages</option>
+                        <option value="Safari">Safari</option>
+                        <option value="Chrome">Google Chrome</option>
+                        <option value="Firefox">Firefox</option>
+                        <option value="Slack">Slack</option>
+                        <option value="Discord">Discord</option>
+                        <option value="Spotify">Spotify</option>
+                        <option value="Custom">Custom App...</option>
+                    </select>
+                    <small>Select the application you want to block</small>
+                </div>
+
+                <div class="form-group" id="customAppGroup" style="display: none;">
+                    <label for="customAppName">Custom App Name</label>
+                    <input type="text" id="customAppName" placeholder="e.g., Photoshop">
+                    <small>Enter the exact application name (without .app extension)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="useTimeRange">Blocking Mode</label>
+                    <select id="useTimeRange" required>
+                        <option value="no">Manual Control (Block/Restore Scripts)</option>
+                        <option value="yes">With Time Range (Scheduled Blocking)</option>
+                    </select>
+                    <small>Choose scheduled blocking or manual on-demand scripts</small>
+                </div>
+
+                <div id="timeRangeFields" style="display: none;">
+                    <div class="form-group">
+                        <label>Blocking Time Range</label>
+                        <div class="time-inputs">
+                            <div>
+                                <input type="time" id="startTime" value="08:15" required>
+                                <small>Start blocking at</small>
+                            </div>
+                            <div>
+                                <input type="time" id="endTime" value="15:30" required>
+                                <small>Stop blocking at</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="daysOfWeek">Days of Week</label>
+                        <select id="daysOfWeek" required>
+                            <option value="1-5">Monday - Friday (Weekdays)</option>
+                            <option value="0-6">Every Day</option>
+                        </select>
+                        <small>Which days should the blocking occur</small>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn-reset" onclick="resetForm()">Reset</button>
+                    <button type="submit" class="btn-generate">Generate Script</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="output-section" id="outputSection">
+            <div class="output-header">
+                <h3>Generated Script</h3>
+                <button class="btn-copy" onclick="copyScript()">Copy to Clipboard</button>
+            </div>
+            <div class="script-output" id="scriptOutput"></div>
+            <div style="margin-top: 15px; text-align: center;">
+                <button class="btn-generate" onclick="downloadScript()" style="display: inline-block; width: auto; padding: 12px 30px;">
+                    Download Script
+                </button>
+            </div>
+        </div>
+
+        <div id="instructions" style="padding: 40px; background: #f9f9f9; margin-top: 40px; border-top: 3px solid #667eea;">
+            <h2 style="color: #667eea; margin-bottom: 20px; text-align: center;">📖 How to Use These Scripts</h2>
+            
+            <div style="max-width: 900px; margin: 0 auto;">
+                <div style="background: white; padding: 30px; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="color: #333; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">🕐 Scheduled Blocking Mode</h3>
+                    <p style="margin-bottom: 15px; line-height: 1.6; color: #555;">This mode automatically blocks the app during specified times on specific days using cron jobs.</p>
+                    
+                    <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Setup Instructions:</h4>
+                    <ol style="line-height: 1.8; color: #555; padding-left: 20px;">
+                        <li><strong>Download the script</strong> and save it (e.g., <code>messages_blocker.sh</code>)</li>
+                        <li><strong>Make it executable:</strong><br>
+                            <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em;">chmod +x messages_blocker.sh</code>
+                        </li>
+                        <li><strong>Create your school/work days file:</strong><br>
+                            <span style="font-size: 0.95em; color: #666; display: block; margin-top: 8px;">
+                                💡 <strong>Tip:</strong> Use the <a href="calendar.html" style="color: #667eea; text-decoration: none; font-weight: 600;">School Day Calendar Generator</a> to create this file! 
+                                It generates a properly formatted <code>school_days.txt</code> with all your selected dates. 
+                                After downloading, navigate to the folder containing the file and move it to <code>/usr/local/etc/</code> using:<br>
+                                <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.85em;">sudo mv school_days.txt /usr/local/etc/school_days.txt</code>
+                            </span>
+                        </li>
+                        <li><strong>Run the setup script with sudo:</strong><br>
+                            <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em;">sudo ./messages_blocker.sh</code>
+                        </li>
+                    </ol>
+                    
+                    <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">What it creates:</h4>
+                    <ul style="line-height: 1.8; color: #555; padding-left: 20px;">
+                        <li>LaunchDaemon plist file to control the blocking</li>
+                        <li>Helper scripts in <code>/usr/local/bin/</code></li>
+                        <li>Cron jobs that run at your specified times</li>
+                        <li>School days file where you list blocking dates</li>
+                        <li>Log file at <code>/var/log/[appname]_block.log</code></li>
+                    </ul>
+                    
+                    <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">To remove/uninstall:</h4>
+                    <p style="color: #555; line-height: 1.6;">Run the manual restore script (generated in Manual Control mode) which will clean up the LaunchDaemon, plist file, and cron jobs.</p>
+                </div>
+                
+                <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="color: #333; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">🎮 Manual Control Mode</h3>
+                    <p style="margin-bottom: 15px; line-height: 1.6; color: #555;">This mode gives you two simple scripts to manually start and stop blocking whenever you want.</p>
+                    
+                    <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Setup Instructions:</h4>
+                    <ol style="line-height: 1.8; color: #555; padding-left: 20px;">
+                        <li><strong>Download both scripts:</strong>
+                            <ul style="margin-top: 8px;">
+                                <li><code>block_[appname].sh</code> - Enables blocking</li>
+                                <li><code>restore_[appname].sh</code> - Disables blocking</li>
+                            </ul>
+                        </li>
+                        <li><strong>Make them executable:</strong><br>
+                            <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em;">chmod +x block_messages.sh restore_messages.sh</code>
+                        </li>
+                    </ol>
+                    
+                    <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">To block the app:</h4>
+                    <p style="color: #555; line-height: 1.6; margin-bottom: 8px;">Run the block script:</p>
+                    <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em;">./block_messages.sh</code>
+                    <p style="color: #555; line-height: 1.6; margin-top: 12px; font-style: italic;">The app will be blocked immediately and will remain blocked until you run the restore script.</p>
+                    
+                    <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">To unblock the app:</h4>
+                    <p style="color: #555; line-height: 1.6; margin-bottom: 8px;">Run the restore script:</p>
+                    <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em;">./restore_messages.sh</code>
+                    <p style="color: #555; line-height: 1.6; margin-top: 12px; font-style: italic;">This will completely remove the blocking (including the LaunchDaemon plist and any cron jobs).</p>
+                </div>
+                
+                <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin-top: 30px; border-left: 4px solid #ffc107;">
+                    <h4 style="color: #856404; margin-bottom: 10px;">⚠️ Important Notes:</h4>
+                    <ul style="line-height: 1.8; color: #856404; padding-left: 20px;">
+                        <li>These scripts require <strong>sudo/administrator privileges</strong> to run</li>
+                        <li>The blocking works by continuously killing the app process - the app cannot be opened while blocking is active</li>
+                        <li>Make sure you have the correct app name (it's case-sensitive)</li>
+                        <li>You can view logs for scheduled blocking in <code>/var/log/[appname]_block.log</code></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Day Calendar Generator</title>
+    <link rel="stylesheet" href="calendar.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📅 School Day Calendar Generator</h1>
+            <p>Select your school days and generate a formatted date list</p>
+            <p style="margin-top: 12px;"><a href="index.html" style="color: white; text-decoration: none; opacity: 0.9; font-size: 0.9em;">← Back to Script Generator</a></p>
+        </div>
+
+        <div class="content-wrapper">
+            <div class="counter">Selected dates: <strong id="selectedCount">0</strong></div>
+            
+            <div class="filters">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="startMonth">Start Month</label>
+                        <select id="startMonth">
+                            <option value="0">January</option>
+                            <option value="1">February</option>
+                            <option value="2">March</option>
+                            <option value="3">April</option>
+                            <option value="4">May</option>
+                            <option value="5">June</option>
+                            <option value="6">July</option>
+                            <option value="7">August</option>
+                            <option value="8">September</option>
+                            <option value="9" selected>October</option>
+                            <option value="10">November</option>
+                            <option value="11">December</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="startYear">Start Year</label>
+                        <select id="startYear">
+                            <option value="2025" selected>2025</option>
+                            <option value="2026">2026</option>
+                            <option value="2027">2027</option>
+                            <option value="2028">2028</option>
+                            <option value="2029">2029</option>
+                            <option value="2030">2030</option>
+                            <option value="2031">2031</option>
+                            <option value="2032">2032</option>
+                            <option value="2033">2033</option>
+                            <option value="2034">2034</option>
+                            <option value="2035">2035</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="endMonth">End Month</label>
+                        <select id="endMonth">
+                            <option value="0">January</option>
+                            <option value="1">February</option>
+                            <option value="2">March</option>
+                            <option value="3">April</option>
+                            <option value="4">May</option>
+                            <option value="5" selected>June</option>
+                            <option value="6">July</option>
+                            <option value="7">August</option>
+                            <option value="8">September</option>
+                            <option value="9">October</option>
+                            <option value="10">November</option>
+                            <option value="11">December</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="endYear">End Year</label>
+                        <select id="endYear">
+                            <option value="2025">2025</option>
+                            <option value="2026" selected>2026</option>
+                            <option value="2027">2027</option>
+                            <option value="2028">2028</option>
+                            <option value="2029">2029</option>
+                            <option value="2030">2030</option>
+                            <option value="2031">2031</option>
+                            <option value="2032">2032</option>
+                            <option value="2033">2033</option>
+                            <option value="2034">2034</option>
+                            <option value="2035">2035</option>
+                        </select>
+                    </div>
+                    
+                    <button class="apply-button" onclick="applyDateRange()">Apply</button>
+                </div>
+            </div>
+            
+            <div class="calendar-grid" id="calendar"></div>
+            <div class="controls">
+                <button class="secondary" onclick="clearAll()">Clear All</button>
+                <button class="secondary" onclick="selectAll()">Select All</button>
+                <button onclick="generateFile()">Generate</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="calendar.js"></script>
+</body>
+</html>
