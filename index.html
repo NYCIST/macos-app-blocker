@@ -15,7 +15,7 @@
 
         <div class="form-section">
             <div class="info-box">
-                <p><strong>What this does:</strong> This generates a bash script that will automatically block macOS apps either on a schedule (with cron jobs) or manually (block/restore scripts). <a href="#instructions" style="color: #2196F3; text-decoration: none; font-weight: 600;">View instructions →</a></p>
+                <p><strong>What this does:</strong> This generates a bash script that will automatically block the Messages app on macOS during specified times on school/work days. The script uses cron jobs and LaunchDaemons to enforce the blocking. <a href="#instructions" style="color: #2196F3; text-decoration: none; font-weight: 600;">View instructions →</a></p>
                 <p style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #ddd;"><strong>Need to create your school days list?</strong> <a href="calendar.html" style="color: #667eea; text-decoration: none; font-weight: 600;">School Day Generator →</a></p>
             </div>
 
@@ -176,13 +176,22 @@
                 </div>
                 
                 <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin-top: 30px; border-left: 4px solid #ffc107;">
-                    <h4 style="color: #856404; margin-bottom: 10px;">⚠️ Important Notes:</h4>
+                    <h4 style="color: #856404; margin-bottom: 10px;">📝 Notes</h4>
                     <ul style="line-height: 1.8; color: #856404; padding-left: 20px;">
                         <li>These scripts require <strong>sudo/administrator privileges</strong> to run</li>
                         <li>The blocking works by continuously killing the app process - the app cannot be opened while blocking is active</li>
                         <li>Make sure you have the correct app name (it's case-sensitive)</li>
-                        <li>You can view logs for scheduled blocking in <code>/var/log/[appname]_block.log</code></li>
                     </ul>
+                    
+                    <h5 style="color: #856404; margin-top: 15px; margin-bottom: 10px;">Check if blocking is active:</h5>
+                    <p style="color: #856404; line-height: 1.6; margin-bottom: 8px;">To verify if an app is currently being blocked:</p>
+                    <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em; color: #333;">sudo launchctl list | grep com.block.[appname]</code>
+                    <p style="color: #856404; line-height: 1.6; font-size: 0.9em; font-style: italic;">Replace [appname] with your app name (e.g., com.block.messages, com.block.safari). If you see output, blocking is active. No output means blocking is not running.</p>
+                    
+                    <h5 style="color: #856404; margin-top: 15px; margin-bottom: 10px;">View logs (Scheduled Blocking only):</h5>
+                    <p style="color: #856404; line-height: 1.6; margin-bottom: 8px;">To see when blocking was enabled/disabled and school day checks:</p>
+                    <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em; color: #333;">cat /var/log/[appname]_block.log</code>
+                    <p style="color: #856404; line-height: 1.6; font-size: 0.9em; font-style: italic;">Replace [appname] with your app name (e.g., messages_block.log, safari_block.log).</p>
                 </div>
             </div>
         </div>
