@@ -24,7 +24,7 @@ https://nycist.github.io/macos-app-blocker/
 ## 📖 How to Use
 
 ### Online (GitHub Pages)
-Visit: `https://yourusername.github.io/macos-app-blocker/`
+Visit: https://nycist.github.io/macos-app-blocker/
 
 ### Local Usage
 1. Download the HTML files
