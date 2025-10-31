@@ -2,6 +2,8 @@
 
 A web-based tool to generate macOS bash scripts that block applications during specific times or on-demand. Perfect for managing distractions during school days, work hours, or focus time.
 
+https://nycist.github.io/macos-app-blocker/
+
 ## 🚀 Features
 
 ### Script Generator (`index.html`)
