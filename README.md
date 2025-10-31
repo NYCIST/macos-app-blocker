@@ -1,6 +1,6 @@
 # macOS App Blocker Script Generator
 
-A web-based tool to generate macOS bash scripts that block applications during specific times or on-demand. Perfect for managing distractions during school days, work hours, or focus time.
+A web-based tool to generate macOS bash scripts that block applications during specific times or on-demand. Perfect for managing distractions during school days, work hours, or focus time. You can use these scripts on their own or distribute them to computers you manage using any MDM that can pass custom scripts to client devices.
 
 https://nycist.github.io/macos-app-blocker/
 
@@ -8,8 +8,8 @@ https://nycist.github.io/macos-app-blocker/
 
 ### Script Generator (`index.html`)
 - **Two Blocking Modes:**
-  - **Scheduled Blocking**: Automatically block apps during specific times on selected days using cron jobs
-  - **Manual Control**: Generate simple block/restore scripts to run on-demand
+  - **Scheduled Blocking**: Automatically block apps during specific times on selected days (managed by cron)
+  - **Manual Control**: Generate simple block/restore scripts you could use to block or restore apps on-demand
 - **Customizable Options (for Scheduled Blocking):**
   - Choose from common apps or enter a custom app name
   - Set specific time ranges for blocking
@@ -17,10 +17,8 @@ https://nycist.github.io/macos-app-blocker/
 - **Complete Setup**: Generates all necessary LaunchDaemons, helper scripts, and cron configurations
 
 ### School Day Calendar (`calendar.html`)
-- Interactive calendar to select school/work days
-- Date range selection (2025-2035)
-- Generates formatted `school_days.txt` file
-- Click individual days or use "Select All" for bulk selection
+- Interactive calendar to select school/work days and it generates a text file, `school_days.txt`, with the dates
+- Date range selection
 - Export in the exact format needed for the scheduled blocking scripts
 
 ## 📖 How to Use
@@ -46,7 +44,7 @@ Visit: `https://yourusername.github.io/macos-app-blocker/`
 ### Manual Control
 1. Select your app
 2. Generate block and restore scripts
-3. Run `block_[app].sh` to start blocking
+3. Run `block_[app].sh` to start blocking the app of your choice
 4. Run `restore_[app].sh` to stop blocking and removal of cron jobs and LaunchDaemons
 
 ## 📋 Requirements
