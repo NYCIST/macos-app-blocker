@@ -100,7 +100,12 @@
             
             <div style="max-width: 900px; margin: 0 auto;">
                 <div style="background: white; padding: 30px; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <h3 style="color: #333; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">🕐 Scheduled Blocking Mode</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding-bottom: 15px; border-bottom: 2px solid #667eea;" onclick="toggleSection('scheduledSection')">
+                        <h3 style="color: #333; margin: 0;">🕐 Scheduled Blocking Mode</h3>
+                        <span id="scheduledToggle" style="color: #667eea; font-size: 1.5em; font-weight: bold;">+</span>
+                    </div>
+                    
+                    <div id="scheduledSection" style="display: none; padding-top: 15px;">
                     <p style="margin-bottom: 15px; line-height: 1.6; color: #555;">This mode automatically blocks the app during specified times on specific days using cron jobs.</p>
                     
                     <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Setup Instructions:</h4>
@@ -133,10 +138,16 @@
                     
                     <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">To remove/uninstall:</h4>
                     <p style="color: #555; line-height: 1.6;">Run the manual restore script (generated in Manual Control mode) which will clean up the LaunchDaemon, plist file, and cron jobs.</p>
+                    </div>
                 </div>
                 
                 <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <h3 style="color: #333; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">🎮 Manual Control Mode</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding-bottom: 15px; border-bottom: 2px solid #667eea;" onclick="toggleSection('manualSection')">
+                        <h3 style="color: #333; margin: 0;">🎮 Manual Control Mode</h3>
+                        <span id="manualToggle" style="color: #667eea; font-size: 1.5em; font-weight: bold;">+</span>
+                    </div>
+                    
+                    <div id="manualSection" style="display: none; padding-top: 15px;">
                     <p style="margin-bottom: 15px; line-height: 1.6; color: #555;">This mode gives you two simple scripts to manually start and stop blocking whenever you want.</p>
                     
                     <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Setup Instructions:</h4>
@@ -161,6 +172,7 @@
                     <p style="color: #555; line-height: 1.6; margin-bottom: 8px;">Run the restore script:</p>
                     <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em;">./restore_messages.sh</code>
                     <p style="color: #555; line-height: 1.6; margin-top: 12px; font-style: italic;">This will completely remove the blocking (including the LaunchDaemon plist and any cron jobs).</p>
+                    </div>
                 </div>
                 
                 <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin-top: 30px; border-left: 4px solid #ffc107;">
