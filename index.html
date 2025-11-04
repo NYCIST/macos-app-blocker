@@ -75,7 +75,22 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="schoolIps">School/Work IP Addresses</label>
+                        <label>School Days File (Optional)</label>
+                        <div class="file-upload-area" id="fileUploadArea">
+                            <div class="upload-icon">📁</div>
+                            <div class="upload-text">
+                                <strong>Drag and drop</strong> your school_days.txt file here<br>
+                                or
+                            </div>
+                            <span class="btn-browse">Browse Files</span>
+                            <input type="file" id="schoolDaysFile" accept=".txt">
+                        </div>
+                        <div class="file-info" id="fileInfo"></div>
+                        <small>Upload your school_days.txt file to embed the dates directly into the script</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="schoolIps">School/Work IP Addresses (Optional)</label>
                         <textarea id="schoolIps" rows="4" placeholder="Enter IP addresses (one per line)"></textarea>
                         <small>Enter IP addresses (one per line) where blocking should occur. Leave empty to block regardless of location.</small>
                     </div>
@@ -120,7 +135,7 @@
                         <li><strong>Make it executable:</strong><br>
                             <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em;">chmod +x messages_blocker.sh</code>
                         </li>
-                        <li><strong>Create your school/work days file:</strong><br>
+                        <li><strong>If you didn't upload a school_days.txt file:</strong><br>
                             <span style="font-size: 0.95em; color: #666; display: block; margin-top: 8px;">
                                 💡 <strong>Tip:</strong> Use the <a href="calendar.html" style="color: #667eea; text-decoration: none; font-weight: 600;">School Day Calendar Generator</a> to create this file! 
                                 It generates a properly formatted <code>school_days.txt</code> with all your selected dates. 
@@ -131,7 +146,7 @@
                         <li><strong>Run the setup script with sudo:</strong><br>
                             <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em;">sudo ./messages_blocker.sh</code>
                             <span style="font-size: 0.95em; color: #666; display: block; margin-top: 8px;">
-                                <strong>Note:</strong> If you provided IP addresses, they will be automatically added to <code>/usr/local/etc/school_ips.txt</code>. You can edit this file later to add or remove IP addresses.
+                                <strong>Note:</strong> If you uploaded a school_days.txt file or provided IP addresses, they will be automatically included in the script. You can edit these files later at <code>/usr/local/etc/</code>.
                             </span>
                         </li>
                     </ol>
