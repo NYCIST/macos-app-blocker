@@ -3,6 +3,11 @@ const customAppGroup = document.getElementById('customAppGroup');
 const useTimeRangeSelect = document.getElementById('useTimeRange');
 const timeRangeFields = document.getElementById('timeRangeFields');
 const form = document.getElementById('scriptForm');
+const fileUploadArea = document.getElementById('fileUploadArea');
+const schoolDaysFileInput = document.getElementById('schoolDaysFile');
+const fileInfo = document.getElementById('fileInfo');
+
+let uploadedSchoolDaysContent = '';
 
 // Show/hide custom app input
 appSelect.addEventListener('change', function() {
@@ -29,6 +34,60 @@ useTimeRangeSelect.addEventListener('change', function() {
         document.getElementById('daysOfWeek').required = false;
     }
 });
+
+// File upload handling
+fileUploadArea.addEventListener('click', function() {
+    schoolDaysFileInput.click();
+});
+
+fileUploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    fileUploadArea.classList.add('drag-over');
+});
+
+fileUploadArea.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    fileUploadArea.classList.remove('drag-over');
+});
+
+fileUploadArea.addEventListener('drop', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    fileUploadArea.classList.remove('drag-over');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleFileUpload(files[0]);
+    }
+});
+
+schoolDaysFileInput.addEventListener('change', function(e) {
+    if (e.target.files.length > 0) {
+        handleFileUpload(e.target.files[0]);
+    }
+});
+
+function handleFileUpload(file) {
+    if (!file.name.endsWith('.txt')) {
+        alert('Please upload a .txt file');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        uploadedSchoolDaysContent = e.target.result;
+        const lineCount = uploadedSchoolDaysContent.split('\n').filter(line => {
+            line = line.trim();
+            return line.length > 0 && !line.startsWith('#');
+        }).length;
+        
+        fileInfo.textContent = `✓ ${file.name} uploaded (${lineCount} dates found)`;
+        fileInfo.classList.add('show');
+    };
+    reader.readAsText(file);
+}
 
 form.addEventListener('submit', function(e) {
     e.preventDefault();
@@ -68,6 +127,11 @@ function generateFullScript() {
     const ipAddresses = schoolIps.split('\n')
         .map(ip => ip.trim())
         .filter(ip => ip.length > 0);
+
+    // Process school days from uploaded file
+    const schoolDays = uploadedSchoolDaysContent.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
 
     // Build script using string concatenation to avoid template literal issues
     let script = '#!/bin/bash\n';
@@ -184,19 +248,33 @@ function generateFullScript() {
     script += '# Create the school days directory and file\n';
     script += 'mkdir -p /usr/local/etc\n';
     script += '\n';
-    script += '# Create school_days.txt if it doesn\'t exist\n';
-    script += 'if [ ! -f /usr/local/etc/school_days.txt ]; then\n';
-    script += '    cat > /usr/local/etc/school_days.txt << \'SCHOOLDAYS\'\n';
-    script += '# School Days\n';
-    script += '# Format: YYYY-MM-DD (one date per line)\n';
-    script += '# Lines starting with # are comments and will be ignored\n';
-    script += '# Example:\n';
-    script += '# 2025-01-06\n';
-    script += '# 2025-01-07\n';
-    script += '\n';
-    script += 'SCHOOLDAYS\n';
-    script += '    echo "Created school days file at /usr/local/etc/school_days.txt"\n';
-    script += 'fi\n';
+    script += '# Create school_days.txt with uploaded content or template\n';
+    
+    if (schoolDays.length > 0) {
+        // User uploaded school days file - create file with those dates
+        script += 'cat > /usr/local/etc/school_days.txt << \'SCHOOLDAYS\'\n';
+        for (let i = 0; i < schoolDays.length; i++) {
+            script += schoolDays[i] + '\n';
+        }
+        script += 'SCHOOLDAYS\n';
+        const dateCount = schoolDays.filter(line => !line.startsWith('#') && line.length > 0).length;
+        script += 'echo "Created school days file at /usr/local/etc/school_days.txt with ' + dateCount + ' date(s)"\n';
+    } else {
+        // No file uploaded - create template file
+        script += 'if [ ! -f /usr/local/etc/school_days.txt ]; then\n';
+        script += '    cat > /usr/local/etc/school_days.txt << \'SCHOOLDAYS\'\n';
+        script += '# School Days\n';
+        script += '# Format: YYYY-MM-DD (one date per line)\n';
+        script += '# Lines starting with # are comments and will be ignored\n';
+        script += '# Example:\n';
+        script += '# 2025-01-06\n';
+        script += '# 2025-01-07\n';
+        script += '\n';
+        script += 'SCHOOLDAYS\n';
+        script += '    echo "Created school days file at /usr/local/etc/school_days.txt"\n';
+        script += 'fi\n';
+    }
+    
     script += '\n';
     script += '# Create school_ips.txt with provided IPs or template\n';
     
@@ -221,7 +299,8 @@ function generateFullScript() {
         script += '# Format: One IP address per line\n';
         script += '# Lines starting with # are comments and will be ignored\n';
         script += '# Example:\n';
-        script += '# nnn.nn.nnn.nn\n';
+        script += '# 207.237.166.234\n';
+        script += '# 69.120.242.35\n';
         script += '\n';
         script += 'SCHOOLIPS\n';
         script += '    echo "Created school IPs file at /usr/local/etc/school_ips.txt"\n';
@@ -244,6 +323,14 @@ function generateFullScript() {
     script += 'echo ""\n';
     script += 'echo "' + appName + ' will be blocked on school days from ' + startTime + '-' + endTime + ' when at school IP"\n';
     script += 'echo "School days file: /usr/local/etc/school_days.txt"\n';
+    
+    if (schoolDays.length > 0) {
+        const dateCount = schoolDays.filter(line => !line.startsWith('#') && line.length > 0).length;
+        script += 'echo "School days configured: ' + dateCount + '"\n';
+    } else {
+        script += 'echo "NOTE: No school days file uploaded - you must manually add dates to /usr/local/etc/school_days.txt"\n';
+    }
+    
     script += 'echo "School IPs file: /usr/local/etc/school_ips.txt"\n';
     
     if (ipAddresses.length > 0) {
@@ -440,6 +527,8 @@ function resetForm() {
     document.getElementById('outputSection').innerHTML = '<div class="output-header"><h3>Generated Script</h3><button class="btn-copy" onclick="copyScript()">Copy to Clipboard</button></div><div class="script-output" id="scriptOutput"></div><div style="margin-top: 15px; text-align: center;"><button class="btn-generate" onclick="downloadScript()" style="display: inline-block; width: auto; padding: 12px 30px;">Download Script</button></div>';
     customAppGroup.style.display = 'none';
     timeRangeFields.style.display = 'none';
+    uploadedSchoolDaysContent = '';
+    fileInfo.classList.remove('show');
 }
 
 function toggleSection(sectionId) {
