@@ -15,7 +15,7 @@
 
         <div class="form-section">
             <div class="info-box">
-                <p><strong>What this does:</strong> This generates a bash script that will automatically block the Messages app on macOS during specified times on school/work days. The script uses cron jobs and LaunchDaemons to enforce the blocking. <a href="#instructions" style="color: #2196F3; text-decoration: none; font-weight: 600;">View instructions →</a></p>
+                <p><strong>What this does:</strong> This generates a bash script that will automatically block apps on macOS during specified times on school/work days when at specified IP addresses (locations). <a href="#instructions" style="color: #2196F3; text-decoration: none; font-weight: 600;">View instructions →</a></p>
                 <p style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #ddd;"><strong>Need to create your school days list?</strong> <a href="calendar.html" style="color: #667eea; text-decoration: none; font-weight: 600;">School Day Generator →</a></p>
             </div>
 
@@ -73,6 +73,12 @@
                         </select>
                         <small>Which days should the blocking occur</small>
                     </div>
+
+                    <div class="form-group">
+                        <label for="schoolIps">School/Work IP Addresses</label>
+                        <textarea id="schoolIps" rows="4" placeholder="207.237.166.234&#10;69.120.242.35&#10;192.168.1.1"></textarea>
+                        <small>Enter IP addresses (one per line) where blocking should occur. Leave empty to block regardless of location.</small>
+                    </div>
                 </div>
 
                 <div class="button-group">
@@ -124,6 +130,9 @@
                         </li>
                         <li><strong>Run the setup script with sudo:</strong><br>
                             <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em;">sudo ./messages_blocker.sh</code>
+                            <span style="font-size: 0.95em; color: #666; display: block; margin-top: 8px;">
+                                <strong>Note:</strong> If you provided IP addresses, they will be automatically added to <code>/usr/local/etc/school_ips.txt</code>. You can edit this file later to add or remove IP addresses.
+                            </span>
                         </li>
                     </ol>
                     
@@ -133,6 +142,7 @@
                         <li>Helper scripts in <code>/usr/local/bin/</code></li>
                         <li>Cron jobs that run at your specified times</li>
                         <li>School days file where you list blocking dates</li>
+                        <li>School IP addresses file where you list allowed blocking locations</li>
                         <li>Log file at <code>/var/log/[appname]_block.log</code></li>
                     </ul>
                     
@@ -181,6 +191,7 @@
                         <li>These scripts require <strong>sudo/administrator privileges</strong> to run</li>
                         <li>The blocking works by continuously killing the app process - the app cannot be opened while blocking is active</li>
                         <li>Make sure you have the correct app name (it's case-sensitive)</li>
+                        <li>Blocking only occurs when BOTH conditions are met: it's a school day AND the device is at one of the specified IP addresses (if IPs are provided)</li>
                     </ul>
                     
                     <h5 style="color: #856404; margin-top: 15px; margin-bottom: 10px;">Check if blocking is active:</h5>
