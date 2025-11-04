@@ -115,7 +115,7 @@ function generateFullScript() {
     const daysOfWeek = document.getElementById('daysOfWeek').value;
     const schoolIps = document.getElementById('schoolIps').value.trim();
 
-    // Convert time to cron format
+    // Convert time to 24-hour format for comparison
     const [startHour, startMinute] = startTime.split(':');
     const [endHour, endMinute] = endTime.split(':');
 
@@ -138,9 +138,13 @@ function generateFullScript() {
     script += '# Setup script for blocking ' + appName + ' app on school days only\n';
     script += '# Author: Jacob Farkas\n';
     script += '# Created with assistance from Claude (Anthropic)\n';
-    script += '# Date: 2025-10-30\n';
+    script += '# Date: ' + new Date().toISOString().split('T')[0] + '\n';
+    script += '# Uses LaunchDaemon checker that runs every minute (no cron jobs)\n';
     script += '\n\n';
-    script += '# Create the LaunchDaemon plist\n';
+    
+    // ===== SECTION 1: CREATE BLOCKING DAEMON (UNCHANGED) =====
+    script += '# Create the blocking LaunchDaemon plist\n';
+    script += '# This daemon kills the app continuously when loaded\n';
     script += 'cat > /Library/LaunchDaemons/com.block.' + appNameLower + '.plist << \'EOF\'\n';
     script += '<?xml version="1.0" encoding="UTF-8"?>\n';
     script += '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n';
@@ -166,92 +170,147 @@ function generateFullScript() {
     script += 'chmod 644 /Library/LaunchDaemons/com.block.' + appNameLower + '.plist\n';
     script += 'chown root:wheel /Library/LaunchDaemons/com.block.' + appNameLower + '.plist\n';
     script += '\n';
+    
+    // ===== SECTION 2: CREATE CHECKER DAEMON (NEW!) =====
+    script += '# Create the checker LaunchDaemon plist\n';
+    script += '# This daemon runs the master checker script every 60 seconds\n';
+    script += 'cat > /Library/LaunchDaemons/com.check.' + appNameLower + '.plist << \'EOF\'\n';
+    script += '<?xml version="1.0" encoding="UTF-8"?>\n';
+    script += '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n';
+    script += '<plist version="1.0">\n';
+    script += '<dict>\n';
+    script += '    <key>Label</key>\n';
+    script += '    <string>com.check.' + appNameLower + '</string>\n';
+    script += '    <key>ProgramArguments</key>\n';
+    script += '    <array>\n';
+    script += '        <string>/usr/local/bin/check_and_manage_' + appNameLower + '.sh</string>\n';
+    script += '    </array>\n';
+    script += '    <key>StartInterval</key>\n';
+    script += '    <integer>60</integer>\n';
+    script += '    <key>RunAtLoad</key>\n';
+    script += '    <true/>\n';
+    script += '    <key>StandardOutPath</key>\n';
+    script += '    <string>/var/log/' + appNameLower + '_check.log</string>\n';
+    script += '    <key>StandardErrorPath</key>\n';
+    script += '    <string>/var/log/' + appNameLower + '_check.log</string>\n';
+    script += '</dict>\n';
+    script += '</plist>\n';
+    script += 'EOF\n';
+    script += '\n';
+    script += '# Set proper permissions\n';
+    script += 'chmod 644 /Library/LaunchDaemons/com.check.' + appNameLower + '.plist\n';
+    script += 'chown root:wheel /Library/LaunchDaemons/com.check.' + appNameLower + '.plist\n';
+    script += '\n';
+    
     script += '# Create scripts directory\n';
     script += 'mkdir -p /usr/local/bin\n';
     script += '\n';
-    script += '# Create the school day checker script\n';
-    script += 'cat > /usr/local/bin/check_school_day.sh << \'EOF\'\n';
+    
+    // ===== SECTION 3: CREATE MASTER CHECKER SCRIPT (NEW! - THE BRAIN) =====
+    script += '# Create the master checker script\n';
+    script += '# This script contains ALL the logic and runs every minute\n';
+    script += 'cat > /usr/local/bin/check_and_manage_' + appNameLower + '.sh << \'EOF\'\n';
     script += '#!/bin/bash\n';
-    script += '# School Day Checker Script\n';
-    script += '# Returns 0 (success) if today is a school day\n';
-    script += '# Returns 1 (failure) if today is not a school day\n';
+    script += '\n';
+    script += '# Configuration\n';
     script += 'SCHOOL_DAYS_FILE="/usr/local/etc/school_days.txt"\n';
-    script += 'TODAY=$(date +%Y-%m-%d)\n';
-    script += '# Check if school days file exists\n';
-    script += 'if [ ! -f "$SCHOOL_DAYS_FILE" ]; then\n';
-    script += '    echo "$(date \'+%Y-%m-%d %H:%M:%S\') - Warning: $SCHOOL_DAYS_FILE not found. Not blocking."\n';
-    script += '    exit 1\n';
-    script += 'fi\n';
-    script += '# Check if today is in the school days file\n';
-    script += 'if grep -q "^${TODAY}$" "$SCHOOL_DAYS_FILE"; then\n';
-    script += '    echo "$(date \'+%Y-%m-%d %H:%M:%S\') - Today ($TODAY) is a school day - proceeding with ' + appName + ' block"\n';
-    script += '    exit 0  # Zero exit = school day, will block\n';
-    script += 'else\n';
-    script += '    echo "$(date \'+%Y-%m-%d %H:%M:%S\') - Today ($TODAY) is NOT a school day - skipping ' + appName + ' block"\n';
-    script += '    exit 1  # Non-zero exit = not a school day, will NOT block\n';
-    script += 'fi\n';
-    script += 'EOF\n';
-    script += '\n';
-    script += '# Create the IP checker script\n';
-    script += 'cat > /usr/local/bin/check_ip.sh << \'EOF\'\n';
-    script += '#!/bin/bash\n';
-    script += '# IP Checker Script\n';
-    script += '# Returns 0 (success) if current IP matches school IPs\n';
-    script += '# Returns 1 (failure) if IP does not match\n';
     script += 'SCHOOL_IPS_FILE="/usr/local/etc/school_ips.txt"\n';
-    script += 'CURRENT_IP=$(curl -s --max-time 5 checkip.amazonaws.com)\n';
-    script += '# Check if we got an IP\n';
-    script += 'if [ -z "$CURRENT_IP" ]; then\n';
-    script += '    echo "$(date \'+%Y-%m-%d %H:%M:%S\') - Warning: Could not determine current IP. Not blocking."\n';
-    script += '    exit 1\n';
+    script += 'BLOCKER_LABEL="com.block.' + appNameLower + '"\n';
+    script += 'START_TIME="' + startTime + '"\n';
+    script += 'END_TIME="' + endTime + '"\n';
+    script += '\n';
+    script += '# Get current date and time\n';
+    script += 'TODAY=$(date +%Y-%m-%d)\n';
+    script += 'CURRENT_TIME=$(date +%H:%M)\n';
+    script += '\n';
+    script += '# Function to check if blocker is currently loaded\n';
+    script += 'is_blocker_loaded() {\n';
+    script += '    launchctl list | grep -q "^[0-9]*\\s*0\\s*${BLOCKER_LABEL}$"\n';
+    script += '    return $?\n';
+    script += '}\n';
+    script += '\n';
+    script += '# Function to load blocker\n';
+    script += 'load_blocker() {\n';
+    script += '    launchctl load /Library/LaunchDaemons/${BLOCKER_LABEL}.plist 2>/dev/null\n';
+    script += '    echo "$(date \'+%Y-%m-%d %H:%M:%S\') - BLOCKING ENABLED: ' + appName + '"\n';
+    script += '}\n';
+    script += '\n';
+    script += '# Function to unload blocker\n';
+    script += 'unload_blocker() {\n';
+    script += '    launchctl unload /Library/LaunchDaemons/${BLOCKER_LABEL}.plist 2>/dev/null\n';
+    script += '    echo "$(date \'+%Y-%m-%d %H:%M:%S\') - BLOCKING DISABLED: ' + appName + '"\n';
+    script += '}\n';
+    script += '\n';
+    script += '# Check 1: Is it within blocking hours?\n';
+    script += 'if [[ "$CURRENT_TIME" < "$START_TIME" ]] || [[ "$CURRENT_TIME" > "$END_TIME" ]]; then\n';
+    script += '    # Outside blocking hours\n';
+    script += '    if is_blocker_loaded; then\n';
+    script += '        unload_blocker\n';
+    script += '    fi\n';
+    script += '    exit 0\n';
     script += 'fi\n';
-    script += '# Trim any whitespace\n';
-    script += 'CURRENT_IP=$(echo "$CURRENT_IP" | tr -d \'[:space:]\')\n';
-    script += '# Check if school IPs file exists\n';
+    script += '\n';
+    script += '# Check 2: Is it a school day?\n';
+    script += 'if [ ! -f "$SCHOOL_DAYS_FILE" ]; then\n';
+    script += '    # No school days file - unload if loaded\n';
+    script += '    if is_blocker_loaded; then\n';
+    script += '        unload_blocker\n';
+    script += '    fi\n';
+    script += '    exit 0\n';
+    script += 'fi\n';
+    script += '\n';
+    script += 'if ! grep -q "^${TODAY}$" "$SCHOOL_DAYS_FILE"; then\n';
+    script += '    # Not a school day\n';
+    script += '    if is_blocker_loaded; then\n';
+    script += '        unload_blocker\n';
+    script += '    fi\n';
+    script += '    exit 0\n';
+    script += 'fi\n';
+    script += '\n';
+    script += '# Check 3: Are we at school IP?\n';
     script += 'if [ ! -f "$SCHOOL_IPS_FILE" ]; then\n';
-    script += '    echo "$(date \'+%Y-%m-%d %H:%M:%S\') - Warning: $SCHOOL_IPS_FILE not found. Not blocking."\n';
-    script += '    exit 1\n';
+    script += '    # No IPs file - unload if loaded\n';
+    script += '    if is_blocker_loaded; then\n';
+    script += '        unload_blocker\n';
+    script += '    fi\n';
+    script += '    exit 0\n';
     script += 'fi\n';
-    script += 'echo "$(date \'+%Y-%m-%d %H:%M:%S\') - Current IP: $CURRENT_IP"\n';
-    script += '# Check if current IP is in the school IPs file\n';
-    script += 'if grep -q "^${CURRENT_IP}$" "$SCHOOL_IPS_FILE"; then\n';
-    script += '    echo "$(date \'+%Y-%m-%d %H:%M:%S\') - IP match found - AT SCHOOL - proceeding with ' + appName + ' block"\n';
-    script += '    exit 0  # Zero exit = at school, will block\n';
-    script += 'else\n';
-    script += '    echo "$(date \'+%Y-%m-%d %H:%M:%S\') - IP not in school list - OUT OF SCHOOL - skipping ' + appName + ' block"\n';
-    script += '    exit 1  # Non-zero exit = not at school, will NOT block\n';
+    script += '\n';
+    script += 'CURRENT_IP=$(curl -s --max-time 5 checkip.amazonaws.com 2>/dev/null | tr -d \'[:space:]\')\n';
+    script += '\n';
+    script += 'if [ -z "$CURRENT_IP" ]; then\n';
+    script += '    # Cannot determine IP - unload if loaded\n';
+    script += '    if is_blocker_loaded; then\n';
+    script += '        unload_blocker\n';
+    script += '    fi\n';
+    script += '    exit 0\n';
+    script += 'fi\n';
+    script += '\n';
+    script += 'if ! grep -q "^${CURRENT_IP}$" "$SCHOOL_IPS_FILE"; then\n';
+    script += '    # Not at school IP\n';
+    script += '    if is_blocker_loaded; then\n';
+    script += '        unload_blocker\n';
+    script += '    fi\n';
+    script += '    exit 0\n';
+    script += 'fi\n';
+    script += '\n';
+    script += '# All conditions met - ensure blocker is loaded\n';
+    script += 'if ! is_blocker_loaded; then\n';
+    script += '    load_blocker\n';
     script += 'fi\n';
     script += 'EOF\n';
     script += '\n';
-    script += '# Create ' + appName + ' block script\n';
-    script += 'cat > /usr/local/bin/block_' + appNameLower + '.sh << \'EOF\'\n';
-    script += '#!/bin/bash\n';
-    script += 'launchctl load /Library/LaunchDaemons/com.block.' + appNameLower + '.plist\n';
-    script += 'echo "$(date \'+%Y-%m-%d %H:%M:%S\') - ' + appName + ' blocking ENABLED"\n';
-    script += 'EOF\n';
+    script += '# Make checker script executable\n';
+    script += 'chmod +x /usr/local/bin/check_and_manage_' + appNameLower + '.sh\n';
     script += '\n';
-    script += '# Create ' + appName + ' restore script\n';
-    script += 'cat > /usr/local/bin/restore_' + appNameLower + '.sh << \'EOF\'\n';
-    script += '#!/bin/bash\n';
-    script += 'if [ -f /Library/LaunchDaemons/com.block.' + appNameLower + '.plist ]; then\n';
-    script += '    launchctl unload /Library/LaunchDaemons/com.block.' + appNameLower + '.plist 2>/dev/null\n';
-    script += '    echo "$(date \'+%Y-%m-%d %H:%M:%S\') - ' + appName + ' blocking DISABLED"\n';
-    script += 'fi\n';
-    script += 'EOF\n';
-    script += '\n';
-    script += '# Make scripts executable\n';
-    script += 'chmod +x /usr/local/bin/check_school_day.sh\n';
-    script += 'chmod +x /usr/local/bin/check_ip.sh\n';
-    script += 'chmod +x /usr/local/bin/block_' + appNameLower + '.sh\n';
-    script += 'chmod +x /usr/local/bin/restore_' + appNameLower + '.sh\n';
-    script += '\n';
+    
+    // ===== SECTION 4: CREATE DATA FILES =====
     script += '# Create the school days directory and file\n';
     script += 'mkdir -p /usr/local/etc\n';
     script += '\n';
     script += '# Create school_days.txt with uploaded content or template\n';
     
     if (schoolDays.length > 0) {
-        // User uploaded school days file - create file with those dates
         script += 'cat > /usr/local/etc/school_days.txt << \'SCHOOLDAYS\'\n';
         for (let i = 0; i < schoolDays.length; i++) {
             script += schoolDays[i] + '\n';
@@ -260,7 +319,6 @@ function generateFullScript() {
         const dateCount = schoolDays.filter(line => !line.startsWith('#') && line.length > 0).length;
         script += 'echo "Created school days file at /usr/local/etc/school_days.txt with ' + dateCount + ' date(s)"\n';
     } else {
-        // No file uploaded - create template file
         script += 'if [ ! -f /usr/local/etc/school_days.txt ]; then\n';
         script += '    cat > /usr/local/etc/school_days.txt << \'SCHOOLDAYS\'\n';
         script += '# School Days\n';
@@ -279,7 +337,6 @@ function generateFullScript() {
     script += '# Create school_ips.txt with provided IPs or template\n';
     
     if (ipAddresses.length > 0) {
-        // User provided IPs - create file with those IPs
         script += 'cat > /usr/local/etc/school_ips.txt << \'SCHOOLIPS\'\n';
         script += '# School IP Addresses\n';
         script += '# Format: One IP address per line\n';
@@ -292,15 +349,12 @@ function generateFullScript() {
         script += 'SCHOOLIPS\n';
         script += 'echo "Created school IPs file at /usr/local/etc/school_ips.txt with ' + ipAddresses.length + ' IP address(es)"\n';
     } else {
-        // No IPs provided - create template file
         script += 'if [ ! -f /usr/local/etc/school_ips.txt ]; then\n';
         script += '    cat > /usr/local/etc/school_ips.txt << \'SCHOOLIPS\'\n';
         script += '# School IP Addresses\n';
         script += '# Format: One IP address per line\n';
         script += '# Lines starting with # are comments and will be ignored\n';
-        script += '# Example:\n';
-        script += '# 207.237.166.234\n';
-        script += '# 69.120.242.35\n';
+        script += '# Add your school/work IP addresses below:\n';
         script += '\n';
         script += 'SCHOOLIPS\n';
         script += '    echo "Created school IPs file at /usr/local/etc/school_ips.txt"\n';
@@ -308,41 +362,108 @@ function generateFullScript() {
     }
     
     script += '\n';
-    script += '# Add cron jobs - Block at ' + startTime + ', Restore at ' + endTime + ' on SCHOOL DAYS and AT SCHOOL IPs only\n';
-    script += '# Both school day and IP checks happen in cron using && operator\n';
-    script += '(crontab -l 2>/dev/null | grep -v "block_' + appNameLower + '\\|restore_' + appNameLower + '"; cat << \'CRON\'\n';
-    script += startMinute + ' ' + startHour + ' * * ' + daysOfWeek + ' ( /usr/local/bin/check_school_day.sh && /usr/local/bin/check_ip.sh && /usr/local/bin/block_' + appNameLower + '.sh ) >> /var/log/' + appNameLower + '_block.log 2>&1\n';
-    script += endMinute + ' ' + endHour + ' * * ' + daysOfWeek + ' /usr/local/bin/restore_' + appNameLower + '.sh >> /var/log/' + appNameLower + '_block.log 2>&1\n';
-    script += 'CRON\n';
-    script += ') | crontab -\n';
+    
+    // ===== SECTION 5: CREATE UNINSTALLER SCRIPT (NEW!) =====
+    script += '# Create uninstaller script\n';
+    script += 'cat > /usr/local/bin/uninstall_' + appNameLower + '_blocker.sh << \'EOF\'\n';
+    script += '#!/bin/bash\n';
+    script += '# Uninstaller script for ' + appName + ' blocker\n';
+    script += '# Author: Jacob Farkas\n';
+    script += '# Created with assistance from Claude (Anthropic)\n';
     script += '\n';
+    script += 'echo "Uninstalling ' + appName + ' blocker..."\n';
+    script += 'echo ""\n';
+    script += '\n';
+    script += '# Unload and remove checker daemon\n';
+    script += 'if [ -f /Library/LaunchDaemons/com.check.' + appNameLower + '.plist ]; then\n';
+    script += '    launchctl unload /Library/LaunchDaemons/com.check.' + appNameLower + '.plist 2>/dev/null\n';
+    script += '    rm /Library/LaunchDaemons/com.check.' + appNameLower + '.plist\n';
+    script += '    echo "✓ Removed checker daemon"\n';
+    script += 'fi\n';
+    script += '\n';
+    script += '# Unload and remove blocking daemon\n';
+    script += 'if [ -f /Library/LaunchDaemons/com.block.' + appNameLower + '.plist ]; then\n';
+    script += '    launchctl unload /Library/LaunchDaemons/com.block.' + appNameLower + '.plist 2>/dev/null\n';
+    script += '    rm /Library/LaunchDaemons/com.block.' + appNameLower + '.plist\n';
+    script += '    echo "✓ Removed blocking daemon"\n';
+    script += 'fi\n';
+    script += '\n';
+    script += '# Remove checker script\n';
+    script += 'if [ -f /usr/local/bin/check_and_manage_' + appNameLower + '.sh ]; then\n';
+    script += '    rm /usr/local/bin/check_and_manage_' + appNameLower + '.sh\n';
+    script += '    echo "✓ Removed checker script"\n';
+    script += 'fi\n';
+    script += '\n';
+    script += '# Optional: Remove data files (uncomment to remove)\n';
+    script += '# if [ -f /usr/local/etc/school_days.txt ]; then\n';
+    script += '#     rm /usr/local/etc/school_days.txt\n';
+    script += '#     echo "✓ Removed school days file"\n';
+    script += '# fi\n';
+    script += '#\n';
+    script += '# if [ -f /usr/local/etc/school_ips.txt ]; then\n';
+    script += '#     rm /usr/local/etc/school_ips.txt\n';
+    script += '#     echo "✓ Removed school IPs file"\n';
+    script += '# fi\n';
+    script += '\n';
+    script += '# Optional: Remove log file (uncomment to remove)\n';
+    script += '# if [ -f /var/log/' + appNameLower + '_check.log ]; then\n';
+    script += '#     rm /var/log/' + appNameLower + '_check.log\n';
+    script += '#     echo "✓ Removed log file"\n';
+    script += '# fi\n';
+    script += '\n';
+    script += 'echo ""\n';
+    script += 'echo "Uninstall complete!"\n';
+    script += 'echo ""\n';
+    script += 'echo "Note: school_days.txt, school_ips.txt, and log files were preserved."\n';
+    script += 'echo "To remove them, uncomment the relevant sections in this script and run again."\n';
+    script += 'EOF\n';
+    script += '\n';
+    script += '# Make uninstaller executable\n';
+    script += 'chmod +x /usr/local/bin/uninstall_' + appNameLower + '_blocker.sh\n';
+    script += '\n';
+    
+    // ===== SECTION 6: LOAD THE CHECKER DAEMON =====
+    script += '# Load the checker daemon (which will manage the blocker)\n';
+    script += 'launchctl load /Library/LaunchDaemons/com.check.' + appNameLower + '.plist\n';
+    script += '\n';
+    
+    // ===== SECTION 7: FINAL OUTPUT =====
     script += 'echo ""\n';
     script += 'echo "=========================================="\n';
     script += 'echo "Setup complete!"\n';
     script += 'echo "=========================================="\n';
     script += 'echo ""\n';
-    script += 'echo "' + appName + ' will be blocked on school days from ' + startTime + '-' + endTime + ' when at school IP"\n';
-    script += 'echo "School days file: /usr/local/etc/school_days.txt"\n';
+    script += 'echo "' + appName + ' will be blocked on school days from ' + startTime + ' to ' + endTime + ' when at school IP"\n';
+    script += 'echo "Checker runs every 60 seconds to manage blocking automatically"\n';
+    script += 'echo ""\n';
+    script += 'echo "Files created:"\n';
+    script += 'echo "  - Blocking daemon: /Library/LaunchDaemons/com.block.' + appNameLower + '.plist"\n';
+    script += 'echo "  - Checker daemon: /Library/LaunchDaemons/com.check.' + appNameLower + '.plist"\n';
+    script += 'echo "  - Master script: /usr/local/bin/check_and_manage_' + appNameLower + '.sh"\n';
+    script += 'echo "  - School days: /usr/local/etc/school_days.txt"\n';
     
     if (schoolDays.length > 0) {
         const dateCount = schoolDays.filter(line => !line.startsWith('#') && line.length > 0).length;
-        script += 'echo "School days configured: ' + dateCount + '"\n';
+        script += 'echo "    (' + dateCount + ' dates configured)"\n';
     } else {
-        script += 'echo "NOTE: No school days file uploaded - you must manually add dates to /usr/local/etc/school_days.txt"\n';
+        script += 'echo "    (You must add dates manually)"\n';
     }
     
-    script += 'echo "School IPs file: /usr/local/etc/school_ips.txt"\n';
+    script += 'echo "  - School IPs: /usr/local/etc/school_ips.txt"\n';
     
     if (ipAddresses.length > 0) {
-        script += 'echo "IP addresses configured: ' + ipAddresses.length + '"\n';
+        script += 'echo "    (' + ipAddresses.length + ' IP(s) configured)"\n';
     } else {
-        script += 'echo "NOTE: No IP addresses provided - you must manually add IPs to /usr/local/etc/school_ips.txt"\n';
+        script += 'echo "    (You must add IPs manually)"\n';
     }
     
-    script += 'echo "Log file: /var/log/' + appNameLower + '_block.log"\n';
+    script += 'echo "  - Log file: /var/log/' + appNameLower + '_check.log"\n';
+    script += 'echo "  - Uninstaller: /usr/local/bin/uninstall_' + appNameLower + '_blocker.sh"\n';
     script += 'echo ""\n';
-    script += 'echo "Cron jobs installed:"\n';
-    script += 'crontab -l | grep ' + appNameLower + '\n';
+    script += 'echo "Commands:"\n';
+    script += 'echo "  Check status: sudo launchctl list | grep ' + appNameLower + '"\n';
+    script += 'echo "  View logs: tail -f /var/log/' + appNameLower + '_check.log"\n';
+    script += 'echo "  Uninstall: sudo /usr/local/bin/uninstall_' + appNameLower + '_blocker.sh"\n';
     script += 'echo ""\n';
 
     // Display the script
@@ -372,7 +493,7 @@ function generateManualScripts() {
     blockScript += '# Block script for ' + appName + '\n';
     blockScript += '# Author: Jacob Farkas\n';
     blockScript += '# Created with assistance from Claude (Anthropic)\n';
-    blockScript += '# Date: 2025-10-30\n';
+    blockScript += '# Date: ' + new Date().toISOString().split('T')[0] + '\n';
     blockScript += '\n';
     blockScript += '# Create a launch daemon to kill ' + appName + '\n';
     blockScript += 'sudo tee /Library/LaunchDaemons/com.block.' + appNameLower + '.plist > /dev/null <<EOF\n';
@@ -398,27 +519,36 @@ function generateManualScripts() {
     blockScript += 'sudo launchctl load /Library/LaunchDaemons/com.block.' + appNameLower + '.plist\n';
     blockScript += 'echo "' + appName + ' blocking enabled"\n';
 
-    // Generate restore script
+    // Generate restore script - UPDATED to remove checker daemon too
     let restoreScript = '#!/bin/bash\n';
     restoreScript += '# Restore script for ' + appName + '\n';
     restoreScript += '# Author: Jacob Farkas\n';
     restoreScript += '# Created with assistance from Claude (Anthropic)\n';
-    restoreScript += '# Date: 2025-10-30\n';
+    restoreScript += '# Date: ' + new Date().toISOString().split('T')[0] + '\n';
     restoreScript += '\n';
-    restoreScript += '# Unload and remove the launch daemon\n';
+    restoreScript += '# Unload and remove the blocking daemon\n';
     restoreScript += 'if [ -f /Library/LaunchDaemons/com.block.' + appNameLower + '.plist ]; then\n';
     restoreScript += '    sudo launchctl unload /Library/LaunchDaemons/com.block.' + appNameLower + '.plist 2>/dev/null\n';
     restoreScript += '    sudo rm /Library/LaunchDaemons/com.block.' + appNameLower + '.plist\n';
     restoreScript += '    echo "' + appName + ' blocking disabled and plist removed"\n';
     restoreScript += 'else\n';
-    restoreScript += '    echo "No blocking configuration found for ' + appName + '"\n';
+    restoreScript += '    echo "No blocking daemon found for ' + appName + '"\n';
     restoreScript += 'fi\n';
     restoreScript += '\n';
-    restoreScript += '# Remove any cron jobs related to this app\n';
-    restoreScript += 'if crontab -l 2>/dev/null | grep -q "block_' + appNameLower + '\\|restore_' + appNameLower + '"; then\n';
-    restoreScript += '    crontab -l 2>/dev/null | grep -v "block_' + appNameLower + '\\|restore_' + appNameLower + '" | crontab -\n';
-    restoreScript += '    echo "Removed cron jobs for ' + appName + '"\n';
+    restoreScript += '# Unload and remove the checker daemon (if exists)\n';
+    restoreScript += 'if [ -f /Library/LaunchDaemons/com.check.' + appNameLower + '.plist ]; then\n';
+    restoreScript += '    sudo launchctl unload /Library/LaunchDaemons/com.check.' + appNameLower + '.plist 2>/dev/null\n';
+    restoreScript += '    sudo rm /Library/LaunchDaemons/com.check.' + appNameLower + '.plist\n';
+    restoreScript += '    echo "Checker daemon removed"\n';
     restoreScript += 'fi\n';
+    restoreScript += '\n';
+    restoreScript += '# Remove the checker script\n';
+    restoreScript += 'if [ -f /usr/local/bin/check_and_manage_' + appNameLower + '.sh ]; then\n';
+    restoreScript += '    sudo rm /usr/local/bin/check_and_manage_' + appNameLower + '.sh\n';
+    restoreScript += '    echo "Checker script removed"\n';
+    restoreScript += 'fi\n';
+    restoreScript += '\n';
+    restoreScript += 'echo "Cleanup complete for ' + appName + '"\n';
 
     // Display the scripts with download buttons
     const outputSection = document.getElementById('outputSection');
