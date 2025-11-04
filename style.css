@@ -163,6 +163,66 @@ button {
     font-size: 0.9em;
     line-height: 1.6;
 }
+
+/* File upload styles */
+.file-upload-area {
+    border: 2px dashed #e0e0e0;
+    border-radius: 6px;
+    padding: 30px;
+    text-align: center;
+    transition: all 0.3s;
+    background: #f9f9f9;
+    cursor: pointer;
+}
+.file-upload-area:hover {
+    border-color: #AA0000;
+    background: #fff;
+}
+.file-upload-area.drag-over {
+    border-color: #AA0000;
+    background: #fff3f3;
+}
+.file-upload-area input[type="file"] {
+    display: none;
+}
+.upload-icon {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    color: #AA0000;
+}
+.upload-text {
+    color: #666;
+    margin-bottom: 10px;
+}
+.upload-text strong {
+    color: #AA0000;
+}
+.file-info {
+    margin-top: 15px;
+    padding: 10px;
+    background: #e8f5e9;
+    border-radius: 4px;
+    color: #2e7d32;
+    font-size: 0.9em;
+    display: none;
+}
+.file-info.show {
+    display: block;
+}
+.btn-browse {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #AA0000;
+    color: white;
+    border-radius: 4px;
+    font-size: 0.9em;
+    margin-top: 10px;
+    transition: background 0.3s;
+}
+.btn-browse:hover {
+    background: #880000;
+}
+
 @media (max-width: 600px) {
     .time-inputs {
         grid-template-columns: 1fr;
