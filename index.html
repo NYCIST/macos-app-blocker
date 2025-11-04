@@ -127,7 +127,7 @@
                     </div>
                     
                     <div id="scheduledSection" style="display: none; padding-top: 15px;">
-                    <p style="margin-bottom: 15px; line-height: 1.6; color: #555;">This mode automatically blocks the app during specified times on specific days using cron jobs.</p>
+                    <p style="margin-bottom: 15px; line-height: 1.6; color: #555;">This mode automatically blocks the app during specified times on specific days. The system checks conditions every minute to enable or disable blocking as needed.</p>
                     
                     <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Setup Instructions:</h4>
                     <ol style="line-height: 1.8; color: #555; padding-left: 20px;">
@@ -153,16 +153,21 @@
                     
                     <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">What it creates:</h4>
                     <ul style="line-height: 1.8; color: #555; padding-left: 20px;">
-                        <li>LaunchDaemon plist file to control the blocking</li>
-                        <li>Helper scripts in <code>/usr/local/bin/</code></li>
-                        <li>Cron jobs that run at your specified times</li>
-                        <li>School days file where you list blocking dates</li>
-                        <li>School IP addresses file where you list allowed blocking locations</li>
-                        <li>Log file at <code>/var/log/[appname]_block.log</code></li>
+                        <li>Blocking daemon - continuously terminates the app when conditions are met</li>
+                        <li>Checker daemon - runs every 60 seconds to evaluate blocking conditions</li>
+                        <li>Master checker script - contains all the blocking logic</li>
+                        <li>School days file - list of dates when blocking should occur</li>
+                        <li>School IP addresses file - list of locations where blocking should occur</li>
+                        <li>Log file at <code>/var/log/[appname]_check.log</code></li>
+                        <li>Uninstaller script for easy removal</li>
                     </ul>
                     
+                    <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">How it works:</h4>
+                    <p style="color: #555; line-height: 1.6;">The checker daemon evaluates conditions every minute. When all conditions are met (correct time, school day, at school IP), it loads the blocking daemon. When any condition fails, it unloads the blocking daemon. This ensures blocking works even after the computer wakes from sleep or changes networks.</p>
+                    
                     <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">To remove/uninstall:</h4>
-                    <p style="color: #555; line-height: 1.6;">Run the manual restore script (generated in Manual Control mode) which will clean up the LaunchDaemon, plist file, and cron jobs.</p>
+                    <p style="color: #555; line-height: 1.6;">Run the uninstaller script that was created during setup:</p>
+                    <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em;">sudo /usr/local/bin/uninstall_[appname]_blocker.sh</code>
                     </div>
                 </div>
                 
@@ -196,7 +201,7 @@
                     <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">To unblock the app:</h4>
                     <p style="color: #555; line-height: 1.6; margin-bottom: 8px;">Run the restore script:</p>
                     <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em;">./restore_messages.sh</code>
-                    <p style="color: #555; line-height: 1.6; margin-top: 12px; font-style: italic;">This will completely remove the blocking (including the LaunchDaemon plist and any cron jobs).</p>
+                    <p style="color: #555; line-height: 1.6; margin-top: 12px; font-style: italic;">This will completely remove the blocking (including the LaunchDaemon plist and checker components if they exist).</p>
                     </div>
                 </div>
                 
@@ -206,7 +211,7 @@
                         <li>These scripts require <strong>sudo/administrator privileges</strong> to run</li>
                         <li>The blocking works by continuously killing the app process - the app cannot be opened while blocking is active</li>
                         <li>Make sure you have the correct app name (it's case-sensitive)</li>
-                        <li>Blocking only occurs when BOTH conditions are met: it's a school day AND the device is at one of the specified IP addresses (if IPs are provided)</li>
+                        <li>Blocking only occurs when all conditions are met: correct time, school day, and at specified IP address (if configured)</li>
                     </ul>
                     
                     <h5 style="color: #856404; margin-top: 15px; margin-bottom: 10px;">Check if blocking is active:</h5>
@@ -214,10 +219,15 @@
                     <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em; color: #333;">sudo launchctl list | grep com.block.[appname]</code>
                     <p style="color: #856404; line-height: 1.6; font-size: 0.9em; font-style: italic;">Replace [appname] with your app name (e.g., com.block.messages, com.block.safari). If you see output, blocking is active. No output means blocking is not running.</p>
                     
+                    <h5 style="color: #856404; margin-top: 15px; margin-bottom: 10px;">Check if checker is running:</h5>
+                    <p style="color: #856404; line-height: 1.6; margin-bottom: 8px;">To verify the checker daemon is running:</p>
+                    <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em; color: #333;">sudo launchctl list | grep com.check.[appname]</code>
+                    <p style="color: #856404; line-height: 1.6; font-size: 0.9em; font-style: italic;">This should always show output if the system is installed correctly.</p>
+                    
                     <h5 style="color: #856404; margin-top: 15px; margin-bottom: 10px;">View logs (Scheduled Blocking only):</h5>
-                    <p style="color: #856404; line-height: 1.6; margin-bottom: 8px;">To see when blocking was enabled/disabled and school day checks:</p>
-                    <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em; color: #333;">cat /var/log/[appname]_block.log</code>
-                    <p style="color: #856404; line-height: 1.6; font-size: 0.9em; font-style: italic;">Replace [appname] with your app name (e.g., messages_block.log, safari_block.log).</p>
+                    <p style="color: #856404; line-height: 1.6; margin-bottom: 8px;">To see when blocking was enabled/disabled:</p>
+                    <code style="background: #f5f5f5; padding: 8px 12px; display: inline-block; margin: 8px 0; border-radius: 4px; font-size: 0.9em; color: #333;">tail -f /var/log/[appname]_check.log</code>
+                    <p style="color: #856404; line-height: 1.6; font-size: 0.9em; font-style: italic;">Replace [appname] with your app name (e.g., messages_check.log, safari_check.log). Logs only appear when blocking state changes.</p>
                 </div>
             </div>
         </div>
