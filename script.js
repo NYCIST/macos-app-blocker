@@ -135,14 +135,13 @@ function generateFullScript() {
 
     // Build script using string concatenation to avoid template literal issues
     let script = '#!/bin/bash\n';
-    script += '# Setup script for blocking ' + appName + ' app on school days only\n';
+    script += '# Setup script for blocking ' + appName + ' app\n';
     script += '# Author: Jacob Farkas\n';
     script += '# Created with assistance from Claude (Anthropic)\n';
     script += '# Date: ' + new Date().toISOString().split('T')[0] + '\n';
-    script += '# Uses LaunchDaemon checker that runs every minute (no cron jobs)\n';
     script += '\n\n';
     
-    // ===== SECTION 1: CREATE BLOCKING DAEMON (UNCHANGED) =====
+    // ===== SECTION 1: CREATE BLOCKING DAEMON =====
     script += '# Create the blocking LaunchDaemon plist\n';
     script += '# This daemon kills the app continuously when loaded\n';
     script += 'cat > /Library/LaunchDaemons/com.block.' + appNameLower + '.plist << \'EOF\'\n';
@@ -171,7 +170,7 @@ function generateFullScript() {
     script += 'chown root:wheel /Library/LaunchDaemons/com.block.' + appNameLower + '.plist\n';
     script += '\n';
     
-    // ===== SECTION 2: CREATE CHECKER DAEMON (NEW!) =====
+    // ===== SECTION 2: CREATE CHECKER DAEMON =====
     script += '# Create the checker LaunchDaemon plist\n';
     script += '# This daemon runs the master checker script every 60 seconds\n';
     script += 'cat > /Library/LaunchDaemons/com.check.' + appNameLower + '.plist << \'EOF\'\n';
@@ -206,9 +205,9 @@ function generateFullScript() {
     script += 'mkdir -p /usr/local/bin\n';
     script += '\n';
     
-    // ===== SECTION 3: CREATE MASTER CHECKER SCRIPT (NEW! - THE BRAIN) =====
+    // ===== SECTION 3: CREATE MASTER CHECKER SCRIPT =====
     script += '# Create the master checker script\n';
-    script += '# This script contains ALL the logic and runs every minute\n';
+    script += '# This script contains all the blocking logic and runs every minute\n';
     script += 'cat > /usr/local/bin/check_and_manage_' + appNameLower + '.sh << \'EOF\'\n';
     script += '#!/bin/bash\n';
     script += '\n';
@@ -305,7 +304,7 @@ function generateFullScript() {
     script += '\n';
     
     // ===== SECTION 4: CREATE DATA FILES =====
-    script += '# Create the school days directory and file\n';
+    script += '# Create the configuration directory\n';
     script += 'mkdir -p /usr/local/etc\n';
     script += '\n';
     script += '# Create school_days.txt with uploaded content or template\n';
@@ -363,7 +362,7 @@ function generateFullScript() {
     
     script += '\n';
     
-    // ===== SECTION 5: CREATE UNINSTALLER SCRIPT (NEW!) =====
+    // ===== SECTION 5: CREATE UNINSTALLER SCRIPT =====
     script += '# Create uninstaller script\n';
     script += 'cat > /usr/local/bin/uninstall_' + appNameLower + '_blocker.sh << \'EOF\'\n';
     script += '#!/bin/bash\n';
@@ -423,7 +422,7 @@ function generateFullScript() {
     script += '\n';
     
     // ===== SECTION 6: LOAD THE CHECKER DAEMON =====
-    script += '# Load the checker daemon (which will manage the blocker)\n';
+    script += '# Load the checker daemon to start monitoring\n';
     script += 'launchctl load /Library/LaunchDaemons/com.check.' + appNameLower + '.plist\n';
     script += '\n';
     
@@ -434,7 +433,7 @@ function generateFullScript() {
     script += 'echo "=========================================="\n';
     script += 'echo ""\n';
     script += 'echo "' + appName + ' will be blocked on school days from ' + startTime + ' to ' + endTime + ' when at school IP"\n';
-    script += 'echo "Checker runs every 60 seconds to manage blocking automatically"\n';
+    script += 'echo "The system checks conditions every 60 seconds"\n';
     script += 'echo ""\n';
     script += 'echo "Files created:"\n';
     script += 'echo "  - Blocking daemon: /Library/LaunchDaemons/com.block.' + appNameLower + '.plist"\n';
@@ -519,7 +518,7 @@ function generateManualScripts() {
     blockScript += 'sudo launchctl load /Library/LaunchDaemons/com.block.' + appNameLower + '.plist\n';
     blockScript += 'echo "' + appName + ' blocking enabled"\n';
 
-    // Generate restore script - UPDATED to remove checker daemon too
+    // Generate restore script
     let restoreScript = '#!/bin/bash\n';
     restoreScript += '# Restore script for ' + appName + '\n';
     restoreScript += '# Author: Jacob Farkas\n';
