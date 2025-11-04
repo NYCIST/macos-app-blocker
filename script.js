@@ -54,6 +54,7 @@ function generateFullScript() {
     const startTime = document.getElementById('startTime').value;
     const endTime = document.getElementById('endTime').value;
     const daysOfWeek = document.getElementById('daysOfWeek').value;
+    const schoolIps = document.getElementById('schoolIps').value.trim();
 
     // Convert time to cron format
     const [startHour, startMinute] = startTime.split(':');
@@ -62,6 +63,11 @@ function generateFullScript() {
     // Create lowercase and safe versions of app name
     const appNameLower = appName.toLowerCase().replace(/\s+/g, '');
     const appNameSafe = appName.replace(/\s+/g, '');
+
+    // Process IP addresses
+    const ipAddresses = schoolIps.split('\n')
+        .map(ip => ip.trim())
+        .filter(ip => ip.length > 0);
 
     // Build script using string concatenation to avoid template literal issues
     let script = '#!/bin/bash\n';
@@ -122,6 +128,37 @@ function generateFullScript() {
     script += 'fi\n';
     script += 'EOF\n';
     script += '\n';
+    script += '# Create the IP checker script\n';
+    script += 'cat > /usr/local/bin/check_ip.sh << \'EOF\'\n';
+    script += '#!/bin/bash\n';
+    script += '# IP Checker Script\n';
+    script += '# Returns 0 (success) if current IP matches school IPs\n';
+    script += '# Returns 1 (failure) if IP does not match\n';
+    script += 'SCHOOL_IPS_FILE="/usr/local/etc/school_ips.txt"\n';
+    script += 'CURRENT_IP=$(curl -s --max-time 5 checkip.amazonaws.com)\n';
+    script += '# Check if we got an IP\n';
+    script += 'if [ -z "$CURRENT_IP" ]; then\n';
+    script += '    echo "$(date \'+%Y-%m-%d %H:%M:%S\') - Warning: Could not determine current IP. Not blocking."\n';
+    script += '    exit 1\n';
+    script += 'fi\n';
+    script += '# Trim any whitespace\n';
+    script += 'CURRENT_IP=$(echo "$CURRENT_IP" | tr -d \'[:space:]\')\n';
+    script += '# Check if school IPs file exists\n';
+    script += 'if [ ! -f "$SCHOOL_IPS_FILE" ]; then\n';
+    script += '    echo "$(date \'+%Y-%m-%d %H:%M:%S\') - Warning: $SCHOOL_IPS_FILE not found. Not blocking."\n';
+    script += '    exit 1\n';
+    script += 'fi\n';
+    script += 'echo "$(date \'+%Y-%m-%d %H:%M:%S\') - Current IP: $CURRENT_IP"\n';
+    script += '# Check if current IP is in the school IPs file\n';
+    script += 'if grep -q "^${CURRENT_IP}$" "$SCHOOL_IPS_FILE"; then\n';
+    script += '    echo "$(date \'+%Y-%m-%d %H:%M:%S\') - IP match found - AT SCHOOL - proceeding with ' + appName + ' block"\n';
+    script += '    exit 0  # Zero exit = at school, will block\n';
+    script += 'else\n';
+    script += '    echo "$(date \'+%Y-%m-%d %H:%M:%S\') - IP not in school list - OUT OF SCHOOL - skipping ' + appName + ' block"\n';
+    script += '    exit 1  # Non-zero exit = not at school, will NOT block\n';
+    script += 'fi\n';
+    script += 'EOF\n';
+    script += '\n';
     script += '# Create ' + appName + ' block script\n';
     script += 'cat > /usr/local/bin/block_' + appNameLower + '.sh << \'EOF\'\n';
     script += '#!/bin/bash\n';
@@ -140,6 +177,7 @@ function generateFullScript() {
     script += '\n';
     script += '# Make scripts executable\n';
     script += 'chmod +x /usr/local/bin/check_school_day.sh\n';
+    script += 'chmod +x /usr/local/bin/check_ip.sh\n';
     script += 'chmod +x /usr/local/bin/block_' + appNameLower + '.sh\n';
     script += 'chmod +x /usr/local/bin/restore_' + appNameLower + '.sh\n';
     script += '\n';
@@ -160,10 +198,41 @@ function generateFullScript() {
     script += '    echo "Created school days file at /usr/local/etc/school_days.txt"\n';
     script += 'fi\n';
     script += '\n';
-    script += '# Add cron jobs - Block at ' + startTime + ', Restore at ' + endTime + ' on SCHOOL DAYS only\n';
-    script += '# School day check happens in cron using && operator\n';
+    script += '# Create school_ips.txt with provided IPs or template\n';
+    
+    if (ipAddresses.length > 0) {
+        // User provided IPs - create file with those IPs
+        script += 'cat > /usr/local/etc/school_ips.txt << \'SCHOOLIPS\'\n';
+        script += '# School IP Addresses\n';
+        script += '# Format: One IP address per line\n';
+        script += '# Lines starting with # are comments and will be ignored\n';
+        script += '# These IPs were provided during script generation:\n';
+        script += '\n';
+        for (let i = 0; i < ipAddresses.length; i++) {
+            script += ipAddresses[i] + '\n';
+        }
+        script += 'SCHOOLIPS\n';
+        script += 'echo "Created school IPs file at /usr/local/etc/school_ips.txt with ' + ipAddresses.length + ' IP address(es)"\n';
+    } else {
+        // No IPs provided - create template file
+        script += 'if [ ! -f /usr/local/etc/school_ips.txt ]; then\n';
+        script += '    cat > /usr/local/etc/school_ips.txt << \'SCHOOLIPS\'\n';
+        script += '# School IP Addresses\n';
+        script += '# Format: One IP address per line\n';
+        script += '# Lines starting with # are comments and will be ignored\n';
+        script += '# Example:\n';
+        script += '# nnn.nn.nnn.nn\n';
+        script += '\n';
+        script += 'SCHOOLIPS\n';
+        script += '    echo "Created school IPs file at /usr/local/etc/school_ips.txt"\n';
+        script += 'fi\n';
+    }
+    
+    script += '\n';
+    script += '# Add cron jobs - Block at ' + startTime + ', Restore at ' + endTime + ' on SCHOOL DAYS and AT SCHOOL IPs only\n';
+    script += '# Both school day and IP checks happen in cron using && operator\n';
     script += '(crontab -l 2>/dev/null | grep -v "block_' + appNameLower + '\\|restore_' + appNameLower + '"; cat << \'CRON\'\n';
-    script += startMinute + ' ' + startHour + ' * * ' + daysOfWeek + ' ( /usr/local/bin/check_school_day.sh && /usr/local/bin/block_' + appNameLower + '.sh ) >> /var/log/' + appNameLower + '_block.log 2>&1\n';
+    script += startMinute + ' ' + startHour + ' * * ' + daysOfWeek + ' ( /usr/local/bin/check_school_day.sh && /usr/local/bin/check_ip.sh && /usr/local/bin/block_' + appNameLower + '.sh ) >> /var/log/' + appNameLower + '_block.log 2>&1\n';
     script += endMinute + ' ' + endHour + ' * * ' + daysOfWeek + ' /usr/local/bin/restore_' + appNameLower + '.sh >> /var/log/' + appNameLower + '_block.log 2>&1\n';
     script += 'CRON\n';
     script += ') | crontab -\n';
@@ -173,8 +242,16 @@ function generateFullScript() {
     script += 'echo "Setup complete!"\n';
     script += 'echo "=========================================="\n';
     script += 'echo ""\n';
-    script += 'echo "' + appName + ' will be blocked on school days from ' + startTime + '-' + endTime + '"\n';
+    script += 'echo "' + appName + ' will be blocked on school days from ' + startTime + '-' + endTime + ' when at school IP"\n';
     script += 'echo "School days file: /usr/local/etc/school_days.txt"\n';
+    script += 'echo "School IPs file: /usr/local/etc/school_ips.txt"\n';
+    
+    if (ipAddresses.length > 0) {
+        script += 'echo "IP addresses configured: ' + ipAddresses.length + '"\n';
+    } else {
+        script += 'echo "NOTE: No IP addresses provided - you must manually add IPs to /usr/local/etc/school_ips.txt"\n';
+    }
+    
     script += 'echo "Log file: /var/log/' + appNameLower + '_block.log"\n';
     script += 'echo ""\n';
     script += 'echo "Cron jobs installed:"\n';
