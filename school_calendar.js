@@ -84,16 +84,18 @@ function createCalendar(months) {
             
             const dayOfWeek = (month.startDay + day - 1) % 7;
             if (dayOfWeek === 0) {
-                dayDiv.classList.add('sunday');
+                dayDiv.classList.add('sunday', 'disabled'); // block Sundays
+                dayDiv.title = 'Sundays cannot be selected';
             } else if (dayOfWeek === 6) {
-                dayDiv.classList.add('saturday');
+                dayDiv.classList.add('saturday', 'disabled'); // block Saturdays
+                dayDiv.title = 'Saturdays cannot be selected';
             }
 
             const dateStr = `${month.year}-${String(month.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             dayDiv.dataset.date = dateStr;
 
-            // Check if this date was previously selected
-            if (selectedDates.has(dateStr)) {
+            // Check if this date was previously selected (but don't render weekends as selected)
+            if (selectedDates.has(dateStr) && !dayDiv.classList.contains('disabled')) {
                 dayDiv.classList.add('selected');
             }
 
@@ -111,6 +113,13 @@ function createCalendar(months) {
 
 function toggleDate(element) {
     const date = element.dataset.date;
+
+    // Block weekends (Saturdays and Sundays) from being selected
+    if (element.classList.contains('disabled')) {
+        // Optionally provide a subtle feedback instead of selecting
+        // For now we silently ignore clicks on weekends.
+        return;
+    }
     
     if (selectedDates.has(date)) {
         selectedDates.delete(date);
@@ -136,7 +145,8 @@ function clearAll() {
 }
 
 function selectAll() {
-    document.querySelectorAll('.day:not(.empty)').forEach(day => {
+    // Skip weekends (disabled days) when selecting all
+    document.querySelectorAll('.day:not(.empty):not(.disabled)').forEach(day => {
         const date = day.dataset.date;
         selectedDates.add(date);
         day.classList.add('selected');
@@ -169,9 +179,21 @@ function generateFile() {
     // Sort dates chronologically
     const sortedDates = Array.from(selectedDates).sort();
     
+    // Filter out any weekends just in case (defensive)
+    const filteredDates = sortedDates.filter(dateStr => {
+        const d = new Date(dateStr);
+        const day = d.getDay();
+        return day !== 0 && day !== 6;
+    });
+
+    if (filteredDates.length === 0) {
+        alert('No valid (non-weekend) dates selected to generate.');
+        return;
+    }
+    
     // Group dates by month
     const datesByMonth = {};
-    sortedDates.forEach(dateStr => {
+    filteredDates.forEach(dateStr => {
         const [year, month, day] = dateStr.split('-');
         const monthKey = `${year}-${month}`;
         
