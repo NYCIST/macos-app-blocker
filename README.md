@@ -8,7 +8,7 @@ https://nycist.github.io/macos-app-blocker/
 
 ### Script Generator (`index.html`)
 - **Two Blocking Modes:**
-  - **Scheduled Blocking**: Automatically block apps during specific times on selected days (managed by cron)
+  - **Scheduled Blocking**: Automatically block apps during specific times on selected days
   - **Manual Control**: Generate simple block/restore scripts you could use to block or restore apps on-demand
 - **Customizable Options (for Scheduled Blocking):**
   - Choose from common apps or enter a custom app name
@@ -16,7 +16,7 @@ https://nycist.github.io/macos-app-blocker/
   - Select which days of the week to enforce blocking
   - Upload school days file or enter dates manually via calendar
   - Specify IP addresses for location-based blocking (optional)
-- **Complete Setup**: Generates all necessary LaunchDaemons, helper scripts, cron configurations, and checker scripts
+- **Complete Setup**: Generates all necessary LaunchDaemons, helper scripts, checker daemon, and uninstaller
 
 ### School Day Calendar (`calendar.html`)
 - Interactive calendar to select school/work days and it generates a text file, `school_days.txt`, with the dates
@@ -27,7 +27,9 @@ https://nycist.github.io/macos-app-blocker/
 ### Smart Blocking Logic
 - **School Day Check**: Only blocks on dates specified in `school_days.txt`
 - **IP Address Check**: Only blocks when device is at specified IP addresses (optional)
-- **Dual Verification**: Both conditions must be met for blocking to activate (when both are configured)
+- **Time Range Check**: Only blocks during specified hours
+- **Dual Verification**: All conditions must be met for blocking to activate
+- **Automatic Management**: System checks conditions every 60 seconds and manages blocking automatically
 
 ## 📖 How to Use
 
@@ -48,15 +50,15 @@ Visit: https://nycist.github.io/macos-app-blocker/
 3. **Optional**: Enter IP addresses where blocking should occur
 4. Generate the full setup script
 5. Run the script with `sudo` on your Mac
-6. If you didn't upload a school days file, manually add dates to `/usr/local/etc/school_days.txt`
-7. If you didn't provide IP addresses, manually add them to `/usr/local/etc/school_ips.txt`
-8. The app will be blocked automatically when all conditions are met
+6. The system will automatically manage blocking based on your conditions
+
+**How it works**: A checker daemon runs every 60 seconds, evaluates all conditions (time, school day, IP address), and loads or unloads the blocking daemon as needed. This ensures blocking works even after sleep/wake cycles or network changes.
 
 ### Manual Control
 1. Select your app
 2. Generate block and restore scripts
 3. Run `block_[app].sh` to start blocking the app of your choice
-4. Run `restore_[app].sh` to stop blocking and removal of cron jobs and LaunchDaemons
+4. Run `restore_[app].sh` to stop blocking and remove all components
 
 ## 📋 Requirements
 
@@ -72,14 +74,15 @@ Visit: https://nycist.github.io/macos-app-blocker/
 - The blocked app cannot be opened while blocking is active
 - Scripts are generated client-side (no data is sent to any server)
 - IP checking requires internet access to determine current public IP
-- Blocking only occurs when BOTH school day and IP checks pass (if both are configured)
+- The system checks conditions every 60 seconds automatically
+- Blocking only occurs when ALL conditions are met (time, school day, IP address)
 
 ## 🎯 Use Cases
 
 - Parents managing kids' screen time during school hours and only at school
 - Students blocking distractions during study time at specific locations
 - Professionals enforcing focus periods at the office
-- Schools deploying via MDM to ensure apps are blocked only on campus
+- Schools deploying via MDM to ensure apps are blocked only on campus during school hours
 - Anyone wanting scheduled or manual app blocking on macOS with location awareness
 
 ## 📝 Files Included
@@ -94,13 +97,19 @@ Visit: https://nycist.github.io/macos-app-blocker/
 
 ## 🔧 Generated Scripts Include
 
-- LaunchDaemon plist file for app blocking
-- `check_school_day.sh` - Validates today is a school day
-- `check_ip.sh` - Validates device is at approved IP address
-- `block_[app].sh` - Loads the blocking daemon
-- `restore_[app].sh` - Unloads the blocking daemon
-- Cron jobs for scheduled execution
-- Log files at `/var/log/[app]_block.log`
+### Scheduled Blocking Mode:
+- **Blocking daemon** (`com.block.[app].plist`) - Continuously terminates the app when loaded
+- **Checker daemon** (`com.check.[app].plist`) - Runs every 60 seconds to evaluate conditions
+- **Master checker script** (`check_and_manage_[app].sh`) - Contains all blocking logic
+- **Uninstaller script** (`uninstall_[app]_blocker.sh`) - Removes all components
+- **Configuration files**:
+  - `school_days.txt` - List of dates when blocking should occur
+  - `school_ips.txt` - List of IP addresses where blocking should occur
+- **Log file** (`/var/log/[app]_check.log`) - Records when blocking is enabled/disabled
+
+### Manual Control Mode:
+- **Block script** - Creates and loads blocking daemon immediately
+- **Restore script** - Removes blocking daemon and all related components
 
 ## 🔍 Troubleshooting
 
@@ -111,12 +120,19 @@ sudo launchctl list | grep com.block.messages
 ```
 Replace "messages" with your app name. If you see output, blocking is active. No output means blocking is not running.
 
-### View logs (Scheduled Blocking only)
-To see when blocking was enabled/disabled, school day checks, and IP checks:
+### Check if the checker daemon is running
+To verify the system is monitoring conditions:
 ```bash
-cat /var/log/messages_block.log
+sudo launchctl list | grep com.check.messages
 ```
-Replace "messages" with your app name if you used a different app.
+This should always show output if the scheduled blocking system is installed.
+
+### View logs (Scheduled Blocking only)
+To see when blocking was enabled/disabled and condition checks:
+```bash
+tail -f /var/log/messages_check.log
+```
+Replace "messages" with your app name. Logs only appear when blocking state changes.
 
 ### Test IP checking manually
 To see what IP address the script detects:
@@ -126,10 +142,17 @@ curl checkip.amazonaws.com
 
 ### Common Issues
 - **Blocking not working?** Make sure you ran the setup script with `sudo`
-- **Cron jobs not running?** Check that dates are properly formatted in `/usr/local/etc/school_days.txt` (YYYY-MM-DD format)
-- **App still opens?** Verify the LaunchDaemon is loaded with the command above
+- **System not checking?** Verify checker daemon is loaded: `sudo launchctl list | grep com.check`
+- **Wrong blocking times?** Check dates in `/usr/local/etc/school_days.txt` (YYYY-MM-DD format)
 - **IP check failing?** Ensure the device has internet access and IP addresses are correctly listed in `/usr/local/etc/school_ips.txt`
 - **Blocking at wrong location?** Verify your public IP address matches what's in `school_ips.txt`
+
+### Uninstalling
+To completely remove the blocking system:
+```bash
+sudo /usr/local/bin/uninstall_[appname]_blocker.sh
+```
+Replace [appname] with your app name (e.g., `uninstall_messages_blocker.sh`).
 
 ## 🤝 Contributing
 
@@ -139,15 +162,28 @@ This is a simple static site. Feel free to fork and customize for your needs!
 
 Free to use and modify. Created by Jacob Farkas with assistance from Claude (Anthropic).
 
-## 🔗 Related
+## 🔗 Technical Details
 
 Generated scripts use:
-- macOS LaunchDaemons for persistent blocking
-- Cron jobs for scheduled execution
-- Bash scripts for setup and control
-- File-based date verification (`school_days.txt`)
-- IP-based location verification (`school_ips.txt`)
-- AWS's checkip.amazonaws.com for IP detection
+- **macOS LaunchDaemons** for persistent blocking and automated checking
+- **Bash scripts** for setup, control, and condition checking
+- **File-based verification**: `school_days.txt` for date checking, `school_ips.txt` for location checking
+- **AWS checkip service** (`checkip.amazonaws.com`) for public IP detection
+- **StartInterval** (60 seconds) for automatic condition monitoring
+- **State management** - only logs when blocking state changes
+
+## 🏗️ System Architecture
+
+**Scheduled Blocking Mode:**
+1. Checker daemon runs every 60 seconds
+2. Master script evaluates all conditions (time, date, IP)
+3. If all conditions met → loads blocking daemon
+4. If any condition fails → unloads blocking daemon
+5. State changes are logged for monitoring
+
+**Manual Control Mode:**
+1. Block script loads blocking daemon immediately
+2. Restore script unloads blocking daemon and removes all components
 
 ---
 
