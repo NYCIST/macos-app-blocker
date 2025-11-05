@@ -109,6 +109,7 @@ body {
     font-weight: bold;
 }
 
+/* weekends: show same styling and red text for both Sunday and Saturday */
 .day.sunday,
 .day.saturday {
     background: #f0f0f0;
@@ -125,7 +126,7 @@ body {
     font-style: italic;
 }
 
-/* Grey out and show not-allowed cursor for weekends */
+/* Grey out and show not-allowed cursor for disabled days (e.g., weekends when disabled) */
 .day.disabled {
   opacity: 0.5;
   cursor: not-allowed;
