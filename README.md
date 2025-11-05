@@ -1,3 +1,11 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+# macos-app-blocker
+
+Web-based tool to generate macOS bash scripts that block applications during specific times.
+
+License: MIT — see LICENSE (Copyright 2025 Jacob Farkas)
+
 # macOS App Blocker Script Generator
 
 A web-based tool to generate macOS bash scripts that block applications during specific times or on-demand. Perfect for managing distractions during school days, work hours, or focus time. Features location-based blocking using IP address checking to ensure blocking only occurs at specified locations (like school or work). You can use these scripts on their own or distribute them to computers you manage using any MDM that can pass custom scripts to client devices.
