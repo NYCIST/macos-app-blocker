@@ -26,12 +26,10 @@ useTimeRangeSelect.addEventListener('change', function() {
         timeRangeFields.style.display = 'block';
         document.getElementById('startTime').required = true;
         document.getElementById('endTime').required = true;
-        document.getElementById('daysOfWeek').required = true;
     } else {
         timeRangeFields.style.display = 'none';
         document.getElementById('startTime').required = false;
         document.getElementById('endTime').required = false;
-        document.getElementById('daysOfWeek').required = false;
     }
 });
 
@@ -112,7 +110,6 @@ function generateFullScript() {
 
     const startTime = document.getElementById('startTime').value;
     const endTime = document.getElementById('endTime').value;
-    const daysOfWeek = document.getElementById('daysOfWeek').value;
     const schoolIps = document.getElementById('schoolIps').value.trim();
 
     // Convert time to 24-hour format for comparison
