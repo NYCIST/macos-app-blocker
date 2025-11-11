@@ -130,6 +130,7 @@ Visit: https://nycist.github.io/macos-app-blocker/
 To verify if an app is currently being blocked:
 
 In Terminal, type the following:
+
 ```sudo launchctl list | grep com.block.messages```
 
 Replace ```messages``` with your app name. If you see output, blocking is active. No output means blocking is not running.
@@ -138,6 +139,7 @@ Replace ```messages``` with your app name. If you see output, blocking is active
 To verify the system is monitoring conditions:
 
 In Terminal, type the following:
+
 ```sudo launchctl list | grep com.check.messages```
 
 This should always show output if the scheduled blocking system is installed.
@@ -146,7 +148,8 @@ This should always show output if the scheduled blocking system is installed.
 To see when blocking was enabled/disabled and condition checks:
 
 In Terminal, type the following:
-tail -f /var/log/messages_check.log
+
+```tail -f /var/log/messages_check.log```
 
 Replace ```messages``` with your app name. Logs only appear when blocking state changes.
 
