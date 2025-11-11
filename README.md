@@ -2,13 +2,13 @@
 
 # macos-app-blocker
 
-Web-based tool to generate macOS bash scripts that block applications during specific times.
+Web-based tool to generate macOS bash scripts that blocks applications from running on a Mac, even those protected by SIP.
 
 License: MIT — see LICENSE (Copyright 2025 Jacob Farkas)
 
 # macOS App Blocker Script Generator
 
-A web-based tool to generate macOS bash scripts that block applications during specific times or on-demand. Perfect for managing distractions during school days, work hours, or focus time. Features location-based blocking using IP address checking to ensure blocking only occurs at specified locations (like school or work). You can use these scripts on their own or distribute them to computers you manage using any MDM that can pass custom scripts to client devices.
+A web-based tool to generate macOS bash scripts that block applications from running on your Mac. The scripts can be configured to block the apps entirely, or during specified times and/or locations. Perfect for managing distractions during school days, work hours, or focus time. Location-based blocking uses IP address checking to ensure blocking only occurs at specified locations (like school or work). You can run the blocking scripts scripts manually on your computers or distribute them to computers managed via MDM, so long as it allows custom scripts.
 
 https://nycist.github.io/macos-app-blocker/
 
@@ -18,12 +18,16 @@ https://nycist.github.io/macos-app-blocker/
 - **Two Blocking Modes:**
   - **Scheduled Blocking**: Automatically block apps during specific times on selected days
   - **Manual Control**: Generate simple block/restore scripts you could use to block or restore apps on-demand
+
+NOTE: should updtae app to allow location ONLY option, as well as TIME ONLY options
+  
 - **Customizable Options (for Scheduled Blocking):**
   - Choose from common apps or enter a custom app name
   - Set specific time ranges for blocking
   - Select which days of the week to enforce blocking
   - Upload school days file or enter dates manually via calendar
-  - Specify IP addresses for location-based blocking (optional)
+  - Specify IP addresses for location-based blocking
+  
 - **Complete Setup**: Generates all necessary LaunchDaemons, helper scripts, checker daemon, and uninstaller
 
 ### School Day Calendar (`calendar.html`)
@@ -32,11 +36,13 @@ https://nycist.github.io/macos-app-blocker/
 - Export in the exact format needed for the scheduled blocking scripts
 - Can be uploaded directly to the script generator
 
+NOTE: Should add IP checker html file, so users can see what IP they are on right now.
+
 ### Smart Blocking Logic
 - **School Day Check**: Only blocks on dates specified in `school_days.txt`
 - **IP Address Check**: Only blocks when device is at specified IP addresses (optional)
 - **Time Range Check**: Only blocks during specified hours
-- **Dual Verification**: All conditions must be met for blocking to activate
+- **Multiple Verification**: All conditions must be met for blocking to activate
 - **Automatic Management**: System checks conditions every 60 seconds and manages blocking automatically
 
 ## 📖 How to Use
@@ -45,7 +51,7 @@ https://nycist.github.io/macos-app-blocker/
 Visit: https://nycist.github.io/macos-app-blocker/
 
 ### Local Usage
-1. Download the HTML files
+1. Download the folder containing the HTML, CSS, and .js files
 2. Open `index.html` in your browser
 3. Generate your scripts
 4. Follow the on-page instructions
@@ -79,7 +85,6 @@ Visit: https://nycist.github.io/macos-app-blocker/
 
 - These scripts require **sudo privileges** to run
 - Blocking works by continuously terminating the app process
-- The blocked app cannot be opened while blocking is active
 - Scripts are generated client-side (no data is sent to any server)
 - IP checking requires internet access to determine current public IP
 - The system checks conditions every 60 seconds automatically
@@ -123,30 +128,33 @@ Visit: https://nycist.github.io/macos-app-blocker/
 
 ### Check if blocking is active
 To verify if an app is currently being blocked:
-```bash
-sudo launchctl list | grep com.block.messages
-```
-Replace "messages" with your app name. If you see output, blocking is active. No output means blocking is not running.
+
+In Terminal, type the following:
+```sudo launchctl list | grep com.block.messages```
+
+Replace ```messages``` with your app name. If you see output, blocking is active. No output means blocking is not running.
 
 ### Check if the checker daemon is running
 To verify the system is monitoring conditions:
-```bash
-sudo launchctl list | grep com.check.messages
-```
+
+In Terminal, type the following:
+```sudo launchctl list | grep com.check.messages```
+
 This should always show output if the scheduled blocking system is installed.
 
 ### View logs (Scheduled Blocking only)
 To see when blocking was enabled/disabled and condition checks:
-```bash
+
+In Terminal, type the following:
 tail -f /var/log/messages_check.log
-```
-Replace "messages" with your app name. Logs only appear when blocking state changes.
+
+Replace ```messages``` with your app name. Logs only appear when blocking state changes.
 
 ### Test IP checking manually
 To see what IP address the script detects:
-```bash
-curl checkip.amazonaws.com
-```
+
+In Terminal, type the following:
+```curl checkip.amazonaws.com```
 
 ### Common Issues
 - **Blocking not working?** Make sure you ran the setup script with `sudo`
@@ -157,9 +165,10 @@ curl checkip.amazonaws.com
 
 ### Uninstalling
 To completely remove the blocking system:
-```bash
-sudo /usr/local/bin/uninstall_[appname]_blocker.sh
-```
+
+In Terminal, type the following:
+```sudo /usr/local/bin/uninstall_[appname]_blocker.sh```
+
 Replace [appname] with your app name (e.g., `uninstall_messages_blocker.sh`).
 
 ## 🤝 Contributing
@@ -197,5 +206,5 @@ Generated scripts use:
 
 **Author:** Jacob Farkas  
 **Created:** 2025-10-30  
-**Last Updated:** 2025-11-04  
+**Last Updated:** 2025-11-11  
 **Powered by:** HTML, CSS, JavaScript (vanilla, no frameworks)
